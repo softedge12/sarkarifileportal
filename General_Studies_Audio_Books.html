@@ -47,37 +47,31 @@ function checkExpiry(user) {
     .then(snapshot => {
       if (snapshot.exists()) {
         snapshot.forEach(userData => {
-          let pages = userData.val().pages || []; // अगर pages null हैं तो empty array बना दें
-          let expiredPages = [];
-
+          let pages = userData.val().pages || []; // Ensure pages exist or use empty array
           const currentDate = new Date();
 
-          // Loop through each page to check expiry
+          // Iterate through the pages and check expiry for each page
           pages.forEach(pageData => {
             const expiryDate = new Date(pageData.expiryDate);
+            const pageName = pageData.redirectPage;
+
+            // If page is expired
             if (currentDate > expiryDate) {
-              expiredPages.push(pageData.redirectPage); // Add expired page to the list
+              alert("The page " + pageName + " has expired. You will be logged out from this page.");
+              
+              // If the current page is expired, log the user out
+              if (window.location.pathname.includes(pageName)) {
+                firebase.auth().signOut().then(() => {
+                  location.replace("index.html"); // Redirect to login page
+                });
+              }
             }
           });
-
-          if (expiredPages.length > 0) {
-            expiredPages.forEach(expiredPage => {
-              // For each expired page, show the alert and logout
-              alert("The page " + expiredPage + " has expired. Logging you out.");
-              // Here, you logout the user only for this specific expired page
-              firebase.auth().signOut().then(() => {
-                location.replace("index.html"); // Redirect after logout
-              });
-            });
-          } else {
-            // If no pages are expired, continue using the valid pages
-            console.log("No expired pages. All pages are still valid.");
-          }
         });
       } else {
         alert("User not found in the database.");
         firebase.auth().signOut().then(() => {
-          location.replace("index.html");
+          location.replace("index.html"); // Redirect to login page
         });
       }
     })
@@ -85,7 +79,6 @@ function checkExpiry(user) {
       console.error("Error checking expiry:", error.message);
     });
 }
-
 
 
 
