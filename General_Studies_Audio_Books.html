@@ -40,33 +40,40 @@
     }
 
     // Check for account expiry
-  function checkExpiry(user) {
+function checkExpiry(user) {
   const userEmail = user.email;
 
   firebase.database().ref("users").orderByChild("email").equalTo(userEmail).once("value")
     .then(snapshot => {
       if (snapshot.exists()) {
         snapshot.forEach(userData => {
-          const pages = userData.val().pages;
-
+          let pages = userData.val().pages;
+          
           if (pages && pages.length > 0) {
             let validPages = [];
+            let expiredPages = [];
 
             pages.forEach(pageData => {
               const expiryDate = new Date(pageData.expiryDate);
               const currentDate = new Date();
 
-              if (currentDate <= expiryDate) {
-                // पेज की एक्सपायरी नहीं हुई है, इसे वैध पेज लिस्ट में रखें
+              if (currentDate > expiryDate) {
+                expiredPages.push(pageData);
+              } else {
                 validPages.push(pageData);
               }
             });
 
+            // यदि कुछ पेज अभी भी वैध हैं, तो उन्हें यूजर को एक्सेस करने देना है
             if (validPages.length > 0) {
-              // यूजर के पास अब भी कुछ वैध पेज हैं, उसे लॉगइन रहने दें
-              console.log("Some pages are still valid:", validPages);
+              console.log("Valid pages:", validPages);
+              
+              if (expiredPages.length > 0) {
+                // केवल एक्सपायर हुए पेज के लिए मैसेज दिखाएं
+                alert(`Some pages have expired: ${expiredPages.map(p => p.pageName).join(", ")}`);
+              }
             } else {
-              // सभी पेज एक्सपायर हो चुके हैं, इसलिए लॉगआउट करें
+              // यदि सारे पेज एक्सपायर हो गए तो यूजर को लॉगआउट करें
               alert("All your pages have expired. Logging out.");
               firebase.auth().signOut().then(() => {
                 location.replace("index.html");
