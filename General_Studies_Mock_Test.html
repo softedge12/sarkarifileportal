@@ -40,43 +40,47 @@
     }
 
     // Check for account expiry
-  function checkExpiry(user) {
+ function checkExpiry(user) {
   const userEmail = user.email;
 
   firebase.database().ref("users").orderByChild("email").equalTo(userEmail).once("value")
     .then(snapshot => {
       if (snapshot.exists()) {
         snapshot.forEach(userData => {
-          const pages = userData.val().pages;
+          let pages = userData.val().pages || []; // अगर pages null हैं तो empty array बना दें
+          let validPages = [];
+          let expiredPages = [];
 
-          if (pages && pages.length > 0) {
-            let validPages = [];
+          const currentDate = new Date();
 
-            pages.forEach(pageData => {
-              const expiryDate = new Date(pageData.expiryDate);
-              const currentDate = new Date();
+          pages.forEach(pageData => {
+            const expiryDate = new Date(pageData.expiryDate);
+            if (currentDate > expiryDate) {
+              expiredPages.push(pageData.redirectPage); // एक्सपायर पेज की लिस्ट में डालें
+            } else {
+              validPages.push(pageData.redirectPage); // वैध पेज की लिस्ट में डालें
+            }
+          });
 
-              if (currentDate <= expiryDate) {
-                // पेज की एक्सपायरी नहीं हुई है, इसे वैध पेज लिस्ट में रखें
-                validPages.push(pageData);
-              }
+          if (expiredPages.length > 0) {
+            // **Expired pages को sessionStorage से हटा दें**
+            expiredPages.forEach(page => {
+              sessionStorage.removeItem(page);
             });
 
-            if (validPages.length > 0) {
-              // यूजर के पास अब भी कुछ वैध पेज हैं, उसे लॉगइन रहने दें
-              console.log("Some pages are still valid:", validPages);
-            } else {
-              // सभी पेज एक्सपायर हो चुके हैं, इसलिए लॉगआउट करें
-              alert("All your pages have expired. Logging out.");
-              firebase.auth().signOut().then(() => {
-                location.replace("index.html");
-              });
-            }
-          } else {
-            alert("No page access data found.");
+            // **Expired पेज के लिए message दिखाएं**
+            alert("Some of your pages have expired: " + expiredPages.join(", "));
+            console.log("Expired pages removed:", expiredPages);
+          }
+
+          if (validPages.length === 0) {
+            // **अगर सारे पेज एक्सपायर हो गए तो पूरा अकाउंट logout करें**
+            alert("All your pages have expired. Logging out.");
             firebase.auth().signOut().then(() => {
               location.replace("index.html");
             });
+          } else {
+            console.log("Valid pages:", validPages);
           }
         });
       } else {
@@ -90,6 +94,7 @@
       console.error("Error checking expiry:", error.message);
     });
 }
+
 
 
     // Periodic expiry check
