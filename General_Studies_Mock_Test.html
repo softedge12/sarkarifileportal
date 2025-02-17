@@ -63,24 +63,17 @@
           });
 
           if (expiredPages.length > 0) {
-            // **Expired pages को sessionStorage से हटा दें**
+            // **Expired pages को तुरन्त logout कर दें**
             expiredPages.forEach(page => {
-              sessionStorage.removeItem(page);
+              alert("The page " + page + " has expired. Logging you out.");
+              firebase.auth().signOut().then(() => {
+                location.replace("index.html"); // या कोई अन्य पेज पर रीडायरेक्ट कर सकते हैं
+              });
             });
-
-            // **Expired पेज के लिए message दिखाएं**
-            alert("Some of your pages have expired: " + expiredPages.join(", "));
             console.log("Expired pages removed:", expiredPages);
-          }
-
-          if (validPages.length === 0) {
-            // **अगर सारे पेज एक्सपायर हो गए तो पूरा अकाउंट logout करें**
-            alert("All your pages have expired. Logging out.");
-            firebase.auth().signOut().then(() => {
-              location.replace("index.html");
-            });
           } else {
             console.log("Valid pages:", validPages);
+            // **Valid pages continue रहेंगे**
           }
         });
       } else {
@@ -94,6 +87,7 @@
       console.error("Error checking expiry:", error.message);
     });
 }
+
 
 
 
