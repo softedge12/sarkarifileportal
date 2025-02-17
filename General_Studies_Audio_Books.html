@@ -40,7 +40,7 @@
     }
 
     // Check for account expiry
- function checkExpiry(user) {
+function checkExpiry(user) {
   const userEmail = user.email;
 
   firebase.database().ref("users").orderByChild("email").equalTo(userEmail).once("value")
@@ -48,32 +48,30 @@
       if (snapshot.exists()) {
         snapshot.forEach(userData => {
           let pages = userData.val().pages || []; // अगर pages null हैं तो empty array बना दें
-          let validPages = [];
           let expiredPages = [];
 
           const currentDate = new Date();
 
+          // Loop through each page to check expiry
           pages.forEach(pageData => {
             const expiryDate = new Date(pageData.expiryDate);
             if (currentDate > expiryDate) {
-              expiredPages.push(pageData.redirectPage); // एक्सपायर पेज की लिस्ट में डालें
-            } else {
-              validPages.push(pageData.redirectPage); // वैध पेज की लिस्ट में डालें
+              expiredPages.push(pageData.redirectPage); // Add expired page to the list
             }
           });
 
           if (expiredPages.length > 0) {
-            // **Expired pages को तुरन्त logout कर दें**
-            expiredPages.forEach(page => {
-              alert("The page " + page + " has expired. Logging you out.");
+            expiredPages.forEach(expiredPage => {
+              // For each expired page, show the alert and logout
+              alert("The page " + expiredPage + " has expired. Logging you out.");
+              // Here, you logout the user only for this specific expired page
               firebase.auth().signOut().then(() => {
-                location.replace("index.html"); // या कोई अन्य पेज पर रीडायरेक्ट कर सकते हैं
+                location.replace("index.html"); // Redirect after logout
               });
             });
-            console.log("Expired pages removed:", expiredPages);
           } else {
-            console.log("Valid pages:", validPages);
-            // **Valid pages continue रहेंगे**
+            // If no pages are expired, continue using the valid pages
+            console.log("No expired pages. All pages are still valid.");
           }
         });
       } else {
