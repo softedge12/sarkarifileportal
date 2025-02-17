@@ -40,43 +40,40 @@
     }
 
     // Check for account expiry
- function checkExpiry(user) {
+function checkExpiry(user) {
   const userEmail = user.email;
 
   firebase.database().ref("users").orderByChild("email").equalTo(userEmail).once("value")
     .then(snapshot => {
       if (snapshot.exists()) {
         snapshot.forEach(userData => {
-          const pages = userData.val().pages;
+          let pages = userData.val().pages || []; // अगर pages null हैं तो empty array बना दें
+          let validPages = [];
+          let expiredPages = [];
 
-          if (pages && pages.length > 0) {
-            let validPages = [];
+          const currentDate = new Date();
 
-            pages.forEach(pageData => {
-              const expiryDate = new Date(pageData.expiryDate);
-              const currentDate = new Date();
-
-              if (currentDate <= expiryDate) {
-                // पेज की एक्सपायरी नहीं हुई है, इसे वैध पेज लिस्ट में रखें
-                validPages.push(pageData);
-              }
-            });
-
-            if (validPages.length > 0) {
-              // यूजर के पास अब भी कुछ वैध पेज हैं, उसे लॉगइन रहने दें
-              console.log("Some pages are still valid:", validPages);
+          pages.forEach(pageData => {
+            const expiryDate = new Date(pageData.expiryDate);
+            if (currentDate > expiryDate) {
+              expiredPages.push(pageData.redirectPage); // एक्सपायर पेज की लिस्ट में डालें
             } else {
-              // सभी पेज एक्सपायर हो चुके हैं, इसलिए लॉगआउट करें
-              alert("All your pages have expired. Logging out.");
-              firebase.auth().signOut().then(() => {
-                location.replace("index.html");
-              });
+              validPages.push(pageData.redirectPage); // वैध पेज की लिस्ट में डालें
             }
-          } else {
-            alert("No page access data found.");
-            firebase.auth().signOut().then(() => {
-              location.replace("index.html");
+          });
+
+          if (expiredPages.length > 0) {
+            // **Expired pages को तुरन्त logout कर दें**
+            expiredPages.forEach(page => {
+              alert("The page " + page + " has expired. Logging you out.");
+              firebase.auth().signOut().then(() => {
+                location.replace("index.html"); // या कोई अन्य पेज पर रीडायरेक्ट कर सकते हैं
+              });
             });
+            console.log("Expired pages removed:", expiredPages);
+          } else {
+            console.log("Valid pages:", validPages);
+            // **Valid pages continue रहेंगे**
           }
         });
       } else {
